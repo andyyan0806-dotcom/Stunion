@@ -1,0 +1,63 @@
+import { Tutor } from '../types';
+
+export const subjects = [
+  'SAT Math',
+  'SAT R&W',
+  'IB HL Math AA',
+  'IB HL Math AI',
+  'IB HL Econ',
+  'IB HL Business',
+  'IB HL Biology',
+  'IB HL Chemistry',
+  'IB HL Physics',
+  'AP Calculus AB',
+  'AP Calculus BC',
+  'AP CS',
+];
+
+export const tutors: Tutor[] = [
+  {
+    id: 'tutor-mina',
+    name: 'Mina K.',
+    bio: 'Experienced IB Math tutor with a strong record of 7/7 student outcomes and clear teaching demos.',
+    education: 'Yonsei University, Applied Mathematics',
+    scores: 'IB 45, SAT 1570',
+    subjects: ['IB HL Math AA', 'IB HL Physics'],
+    rate: 95000,
+    rating: 4.9,
+    language: 'both',
+  },
+  {
+    id: 'tutor-jun',
+    name: 'Jun S.',
+    bio: 'SAT and AP specialist who helps international school students improve exam strategy and essay structure.',
+    education: 'KAIST, Computer Science',
+    scores: 'SAT 1560, AP Calculus BC 5',
+    subjects: ['SAT Math', 'SAT R&W', 'AP Calculus BC', 'AP CS'],
+    rate: 110000,
+    rating: 4.8,
+    language: 'english',
+  },
+  {
+    id: 'tutor-hana',
+    name: 'Hana L.',
+    bio: 'Korean returnee with deep IB and Korean admissions guidance, focused on 1:1 targeted learning plans.',
+    education: 'University of Michigan, Economics',
+    scores: 'IB 44, SAT 1540',
+    subjects: ['IB HL Econ', 'SAT R&W', 'IB HL Business'],
+    rate: 120000,
+    rating: 4.7,
+    language: 'both',
+  },
+  {
+    id: 'tutor-soo',
+    name: 'Soo B.',
+    bio: 'High-performing student tutor with verified IB scores and a polished demo for conceptual explanations.',
+    education: 'Chadwick IB Senior cohort',
+    scores: 'IB 43',
+    subjects: ['IB HL Biology', 'IB HL Chemistry'],
+    rate: 80000,
+    rating: 4.6,
+    language: 'korean',
+  },
+];
