@@ -61,7 +61,7 @@ export default function TutorsPage() {
       <div style={{ display: 'grid', gap: '2rem' }}>
         <div>
           <p className="tag">Tutor discovery</p>
-          <h1 className="section-title">Find a verified tutor for IB, MYP, AP, or college counseling.</h1>
+          <h1 className="section-title">Find a verified tutor.</h1>
           <p className="subtitle" style={{ marginTop: '0.75rem' }}>
             Every tutor has a manually verified transcript. Filter by subject, language, or intro call availability.
           </p>

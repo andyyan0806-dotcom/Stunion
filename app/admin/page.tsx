@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../components/AuthProvider';
+import { getBrowserClient } from '../../lib/supabaseClient';
 
 interface PendingTutor {
   id: string;
@@ -29,14 +32,26 @@ interface Metrics {
 }
 
 export default function AdminDashboard() {
+  const { role, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [pending, setPending] = useState<PendingTutor[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!authLoading && role !== 'admin') router.push('/');
+  }, [authLoading, role, router]);
+
+  async function authHeaders() {
+    const { data: { session } } = await getBrowserClient().auth.getSession();
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` };
+  }
+
   async function load() {
-    const res = await fetch('/api/admin');
+    const headers = await authHeaders();
+    const res = await fetch('/api/admin', { headers });
     const data = await res.json();
     setMetrics(data.metrics ?? null);
     setPending(data.approvals ?? []);
@@ -44,12 +59,12 @@ export default function AdminDashboard() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (role === 'admin') load(); }, [role]);
 
   async function updateTutorStatus(tutorId: string, status: string) {
     const res = await fetch('/api/admin', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ type: 'update-tutor-status', tutorId, status }),
     });
     if (res.ok) {
@@ -62,7 +77,7 @@ export default function AdminDashboard() {
   async function resolveDispute(disputeId: string, resolution: string) {
     const res = await fetch('/api/admin', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ type: 'resolve-dispute', disputeId, resolution }),
     });
     if (res.ok) {
@@ -77,7 +92,7 @@ export default function AdminDashboard() {
     const fd = new FormData(e.currentTarget);
     const res = await fetch('/api/admin', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({
         type: 'create-promo-code',
         code: fd.get('code'),
@@ -98,6 +113,8 @@ export default function AdminDashboard() {
     { label: 'Platform GMV (completed)', value: `₩${metrics.gmv.toLocaleString()}` },
     { label: 'Open disputes', value: metrics.openDisputes },
   ] : [];
+
+  if (authLoading || role !== 'admin') return null;
 
   return (
     <main className="container" style={{ padding: '3rem 0 4rem' }}>

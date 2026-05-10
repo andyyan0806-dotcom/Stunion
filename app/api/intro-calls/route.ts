@@ -34,8 +34,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tutorId = searchParams.get('tutorId');
 
-  const query = supabase.from('intro_calls').select('*').order('requested_at', { ascending: false });
-  if (tutorId) query.eq('tutor_id', tutorId);
+  let query = supabase.from('intro_calls').select('*').order('requested_at', { ascending: false });
+  if (tutorId) query = query.eq('tutor_id', tutorId);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

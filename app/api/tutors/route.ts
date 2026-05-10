@@ -25,10 +25,15 @@ export async function POST(request: Request) {
   if (contentType.includes('multipart/form-data')) {
     const fd = await request.formData();
 
-    // Upload helper
-    async function uploadFile(file: File, bucket: string): Promise<string | null> {
+    const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const ALLOWED_DOC_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+    async function uploadFile(file: File, bucket: string, allowedTypes: string[]): Promise<string | null> {
       if (!file || file.size === 0) return null;
-      const ext = file.name.split('.').pop() ?? 'bin';
+      if (file.size > MAX_FILE_SIZE) return null;
+      if (!allowedTypes.includes(file.type)) return null;
+      const ext = file.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '') ?? 'bin';
       const path = `${crypto.randomUUID()}.${ext}`;
       const bytes = await file.arrayBuffer();
       const { data, error } = await supabase.storage
@@ -38,7 +43,6 @@ export async function POST(request: Request) {
       if (bucket === 'photos') {
         return supabase.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
       }
-      // Credentials bucket is private — store path only for admin access
       return data.path;
     }
 
@@ -46,9 +50,9 @@ export async function POST(request: Request) {
     const transcript = fd.get('transcript') as File | null;
     const scoreDoc = fd.get('score_doc') as File | null;
 
-    if (photo) photoUrl = await uploadFile(photo, 'photos');
-    if (transcript) transcriptUrl = await uploadFile(transcript, 'credentials');
-    if (scoreDoc) scoreUrl = await uploadFile(scoreDoc, 'credentials');
+    if (photo) photoUrl = await uploadFile(photo, 'photos', ALLOWED_IMAGE_TYPES);
+    if (transcript) transcriptUrl = await uploadFile(transcript, 'credentials', ALLOWED_DOC_TYPES);
+    if (scoreDoc) scoreUrl = await uploadFile(scoreDoc, 'credentials', ALLOWED_DOC_TYPES);
 
     for (const [key, val] of fd.entries()) {
       if (typeof val === 'string') fields[key] = val;
@@ -57,7 +61,8 @@ export async function POST(request: Request) {
     fields = await request.json();
   }
 
-  const subjects = fields.subjects ? JSON.parse(fields.subjects) : [];
+  let subjects: string[] = [];
+  try { subjects = fields.subjects ? JSON.parse(fields.subjects) : []; } catch { subjects = []; }
   if (!Array.isArray(subjects) || subjects.length === 0) {
     return NextResponse.json({ error: 'At least one subject is required.' }, { status: 400 });
   }

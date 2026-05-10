@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '../../../lib/supabaseClient';
+import { requireAdmin } from '../../../lib/serverAuth';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const supabase = getSupabaseClient();
 
   const [
@@ -37,6 +41,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const supabase = getSupabaseClient();
   const payload = await request.json();
 

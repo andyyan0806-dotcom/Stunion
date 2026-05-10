@@ -39,28 +39,32 @@ button, input, select, textarea {
   cursor: pointer;
   background: #4338ca;
   color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
 }
 .button.secondary {
   background: #e5e7eb;
   color: #111827;
 }
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .section-title {
-  font-size: clamp(1.5rem, 2.2vw, 2.5rem);
+  font-size: clamp(1.4rem, 4vw, 2.5rem);
   margin: 0;
+  line-height: 1.2;
 }
 .subtitle {
   color: #6b7280;
   max-width: 42rem;
   line-height: 1.75;
+  margin: 0;
 }
 .grid {
   display: grid;
   gap: 1.25rem;
-}
-@media (min-width: 768px) {
-  .grid-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 .tag {
   display: inline-flex;
@@ -71,4 +75,102 @@ button, input, select, textarea {
   padding: 0.4rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ── Mobile nav drawer ─────────────────────────────────────────────────── */
+.nav-links {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.nav-hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+}
+.nav-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #374151;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+.nav-drawer {
+  display: none;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+.nav-drawer.open {
+  display: flex;
+}
+.nav-drawer .button {
+  width: 100%;
+  border-radius: 0.75rem;
+  justify-content: flex-start;
+}
+
+/* ── Responsive utilities ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .nav-links {
+    display: none;
+  }
+  .nav-hamburger {
+    display: flex;
+  }
+  .hide-mobile {
+    display: none !important;
+  }
+  .stack-mobile {
+    flex-direction: column !important;
+  }
+  .full-mobile {
+    width: 100% !important;
+  }
+  /* Tighten page padding on mobile */
+  main.container {
+    padding-top: 2rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+  /* Section titles */
+  .section-title {
+    font-size: 1.4rem;
+  }
+  /* Prevent horizontal scroll from chip rows */
+  .card {
+    min-width: 0;
+  }
+  /* Stat grids (dashboard) collapse to 2-col */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* Tutor card grid — single column */
+  .tutor-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Forms: make range inputs full width */
+  input[type="range"] {
+    width: 100%;
+  }
+  /* Buttons in card footers stack */
+  .card-actions {
+    flex-direction: column;
+  }
+  .card-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 641px) {
+  .nav-drawer {
+    display: none !important;
+  }
 }
