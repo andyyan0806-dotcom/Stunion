@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getBrowserClient } from '../../lib/supabaseClient';
 import { Booking } from '../../types';
+import { ReviewForm } from '../../components/ReviewForm';
 
 type BookingWithTutor = Booking & {
   tutors?: { name: string; photo_url?: string; subjects: string[] };
@@ -25,6 +26,7 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<BookingWithTutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
+  const [reviewed, setReviewed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     getBrowserClient().auth.getSession().then(({ data }: { data: { session: { user: { email?: string } } | null } }) => {
@@ -107,9 +109,17 @@ export default function MyBookingsPage() {
                   </div>
 
                   {b.status === 'completed' && (
-                    <Link href={`/tutors/${b.tutor_id}`} style={{ fontSize: '0.85rem', color: '#4338ca' }}>
-                      Leave a review →
-                    </Link>
+                    reviewed.has(b.id) ? (
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#16a34a' }}>✔ Review submitted — thank you!</p>
+                    ) : (
+                      <ReviewForm
+                        bookingId={b.id}
+                        tutorId={b.tutor_id}
+                        tutorName={b.tutors?.name ?? 'your tutor'}
+                        parentEmail={email!}
+                        onSubmitted={() => setReviewed(prev => new Set(prev).add(b.id))}
+                      />
+                    )
                   )}
                 </div>
               );

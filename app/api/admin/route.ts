@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   ] = await Promise.all([
     supabase.from('tutors').select('*', { count: 'exact', head: true }).in('status', ['verified', 'active']),
     supabase.from('tutors').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabase.from('tutors').select('id, name, education, rate, language, status, created_at').eq('status', 'pending').order('created_at', { ascending: true }),
+    supabase.from('tutors').select('id, name, email, phone, education, scores, rate, language, status, transcript_url, score_url, created_at').eq('status', 'pending').order('created_at', { ascending: true }),
     supabase.from('disputes').select('*').eq('status', 'open').order('created_at', { ascending: true }),
     supabase.from('bookings').select('amount').eq('status', 'completed'),
   ]);

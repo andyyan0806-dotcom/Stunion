@@ -8,10 +8,15 @@ import { getBrowserClient } from '../../lib/supabaseClient';
 interface PendingTutor {
   id: string;
   name: string;
+  email: string;
+  phone?: string;
   education: string;
+  scores?: string;
   rate: number;
   language: string;
   status: string;
+  transcript_url?: string;
+  score_url?: string;
   created_at: string;
 }
 
@@ -156,10 +161,19 @@ export default function AdminDashboard() {
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {pending.map(t => (
                 <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid #e5e7eb' }}>
-                  <div>
+                  <div style={{ display: 'grid', gap: '0.2rem' }}>
                     <p style={{ margin: 0, fontWeight: 600 }}>{t.name}</p>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#6b7280' }}>{t.education} · ₩{t.rate?.toLocaleString()}/hr · {t.language}</p>
-                    <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>Applied {new Date(t.created_at).toLocaleDateString()}</p>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>{t.education} · ₩{t.rate?.toLocaleString()}/hr · {t.language}</p>
+                    {t.scores && <p style={{ margin: 0, fontSize: '0.85rem', color: '#374151' }}>Scores: {t.scores}</p>}
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#374151' }}>
+                      <a href={`mailto:${t.email}`} style={{ color: '#4338ca' }}>{t.email}</a>
+                      {t.phone && <span style={{ color: '#6b7280' }}> · {t.phone}</span>}
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                      {t.transcript_url && <a href={`https://nvltnfeqdsmpkoydeoyr.supabase.co/storage/v1/object/authenticated/credentials/${t.transcript_url}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#4338ca' }}>View transcript →</a>}
+                      {t.score_url && <a href={`https://nvltnfeqdsmpkoydeoyr.supabase.co/storage/v1/object/authenticated/credentials/${t.score_url}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#4338ca' }}>View score doc →</a>}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>Applied {new Date(t.created_at).toLocaleDateString()}</p>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button
