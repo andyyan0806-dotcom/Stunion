@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserClient } from '../../lib/supabaseClient';
 
@@ -18,7 +18,7 @@ const inputStyle: React.CSSProperties = {
 type Tab = 'login' | 'signup';
 type Role = 'parent' | 'tutor';
 
-export default function AuthPage() {
+function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'signup' ? 'signup' : 'login');
@@ -92,7 +92,6 @@ export default function AuthPage() {
   return (
     <main className="container" style={{ padding: '4rem 0', display: 'flex', justifyContent: 'center' }}>
       <div style={{ maxWidth: '420px', width: '100%', display: 'grid', gap: '1.5rem' }}>
-
         <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#111827' }}>Welcome to Stunion</h1>
 
         {/* Tabs */}
@@ -191,5 +190,13 @@ export default function AuthPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <AuthPage />
+    </Suspense>
   );
 }

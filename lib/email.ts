@@ -1,8 +1,12 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-// Switch to your verified domain once stunion.com is registered
+// Switch to your verified domain once stunion.site is registered
 const FROM = 'Stunion <onboarding@resend.dev>';
+
+function getResend() {
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function sendBookingNotificationToTutor({
   tutorEmail,
@@ -28,6 +32,8 @@ export async function sendBookingNotificationToTutor({
     hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul',
   });
 
+  const resend = getResend();
+  if (!resend) return;
   await resend.emails.send({
     from: FROM,
     to: tutorEmail,
@@ -43,7 +49,7 @@ export async function sendBookingNotificationToTutor({
         <tr><td style="padding:6px 0;color:#6b7280">Session amount</td><td style="padding:6px 0;font-weight:600">₩${grossAmount.toLocaleString()}</td></tr>
       </table>
       <p style="margin-top:1.5rem">
-        <a href="https://stunion.com/dashboard" style="background:#4338ca;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">
+        <a href="https://stunion.site/dashboard" style="background:#4338ca;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">
           Accept or decline →
         </a>
       </p>
@@ -75,6 +81,8 @@ export async function sendBookingConfirmationToParent({
   });
   const fee = feeWaived ? 0 : Math.round(grossAmount * 0.1);
 
+  const resend = getResend();
+  if (!resend) return;
   await resend.emails.send({
     from: FROM,
     to: parentEmail,
@@ -91,7 +99,7 @@ export async function sendBookingConfirmationToParent({
         <tr><td style="padding:6px 0;color:#6b7280">Platform fee</td><td style="padding:6px 0">${feeWaived ? 'Waived (promo)' : `₩${fee.toLocaleString()}`}</td></tr>
       </table>
       <p style="margin-top:1.5rem">
-        <a href="https://stunion.com/my-bookings" style="background:#4338ca;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">
+        <a href="https://stunion.site/my-bookings" style="background:#4338ca;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">
           View my bookings →
         </a>
       </p>
