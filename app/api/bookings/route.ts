@@ -1,5 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '../../../lib/supabaseClient';
+import { sendBookingNotificationToTutor, sendBookingConfirmationToParent } from '../../../lib/email';
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const email = searchParams.get('email');
+  if (!email) return NextResponse.json({ error: 'email is required' }, { status: 400 });
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*, tutors(name, photo_url, subjects)')
+    .eq('parent_email', email)
+    .order('created_at', { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ bookings: data ?? [] });
+}
 
 export async function POST(request: Request) {
   const supabase = getSupabaseClient();
@@ -62,6 +79,38 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase.from('bookings').insert([booking]).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Send email notifications — fire-and-forget (don't block the response)
+  if (process.env.RESEND_API_KEY) {
+    const { data: tutorRow } = await supabase
+      .from('tutors')
+      .select('email, name')
+      .eq('id', tutorId)
+      .maybeSingle();
+
+    if (tutorRow?.email) {
+      sendBookingNotificationToTutor({
+        tutorEmail: tutorRow.email,
+        tutorName: tutorRow.name,
+        parentEmail,
+        studentName: studentName ?? '',
+        bookingDate,
+        durationMinutes: Number(durationMinutes),
+        subjectFocus,
+        grossAmount: amount,
+      }).catch(() => {});
+    }
+
+    sendBookingConfirmationToParent({
+      parentEmail,
+      studentName: studentName ?? '',
+      tutorName: tutorRow?.name ?? 'your tutor',
+      bookingDate,
+      durationMinutes: Number(durationMinutes),
+      grossAmount: amount,
+      feeWaived: feeWaived,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ success: true, booking: data });
 }

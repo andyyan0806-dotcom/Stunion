@@ -77,6 +77,9 @@ export async function POST(request: Request) {
 
   const tutor = {
     id: crypto.randomUUID(),
+    user_id: fields.user_id || null,
+    email: fields.email,
+    phone: fields.phone || null,
     name: fields.name || fields.email.split('@')[0],
     bio: fields.bio ?? '',
     education: fields.education ?? '',

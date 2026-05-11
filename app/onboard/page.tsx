@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { subjectCategories } from '../../lib/mockData';
+import { getBrowserClient } from '../../lib/supabaseClient';
 
 const inputStyle: React.CSSProperties = {
   display: 'block',
@@ -23,6 +24,13 @@ export default function TutorOnboardPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    getBrowserClient().auth.getSession().then(({ data }: { data: { session: { user: { id: string } } | null } }) => {
+      if (data.session?.user?.id) setUserId(data.session.user.id);
+    });
+  }, []);
 
   function toggleSubject(s: string) {
     setSelectedSubjects(cur =>
@@ -43,6 +51,7 @@ export default function TutorOnboardPage() {
     fd.set('bio', bio);
     fd.set('rate', String(rate));
     fd.set('intro_call_enabled', String(introCall));
+    if (userId) fd.set('user_id', userId);
 
     const res = await fetch('/api/tutors', { method: 'POST', body: fd });
     const json = await res.json();

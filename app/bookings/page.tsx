@@ -18,6 +18,7 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('tutorId') ?? '';
@@ -45,6 +46,7 @@ export default function BookingPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tutorId) { setError('No tutor selected.'); return; }
+    if (!tosAccepted) { setError('You must accept the Terms of Service to continue.'); return; }
     setLoading(true);
     setError(null);
     const form = event.currentTarget;
@@ -198,9 +200,25 @@ export default function BookingPage() {
             </div>
           )}
 
+          {/* ToS acceptance */}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+            <input
+              type="checkbox"
+              checked={tosAccepted}
+              onChange={e => setTosAccepted(e.target.checked)}
+              style={{ marginTop: '0.15rem', width: '1rem', height: '1rem', flexShrink: 0 }}
+            />
+            <span>
+              I have read and agree to the{' '}
+              <a href="/tos" target="_blank" rel="noopener noreferrer" style={{ color: '#4338ca' }}>Terms of Service</a>
+              {' '}and{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#4338ca' }}>Privacy Policy</a>.
+            </span>
+          </label>
+
           {error && <p style={{ margin: 0, color: '#b91c1c', fontSize: '0.9rem' }}>{error}</p>}
 
-          <button type="submit" className="button" disabled={loading || grossAmount === 0}>
+          <button type="submit" className="button" disabled={loading || grossAmount === 0 || !tosAccepted}>
             {loading ? 'Submitting…' : `Submit request${grossAmount > 0 ? ` — ₩${grossAmount.toLocaleString()}` : ''}`}
           </button>
         </form>

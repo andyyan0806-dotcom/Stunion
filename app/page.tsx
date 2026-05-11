@@ -1,8 +1,21 @@
 import Link from 'next/link';
 import { TutorCard } from '../components/TutorCard';
-import { tutors } from '../lib/mockData';
+import { getSupabaseClient } from '../lib/supabaseClient';
+import { Tutor } from '../types';
 
-export default function HomePage() {
+export const revalidate = 60;
+
+export default async function HomePage() {
+  const supabase = getSupabaseClient();
+  const { data } = await supabase
+    .from('tutors')
+    .select('*')
+    .in('status', ['verified', 'active'])
+    .order('rating', { ascending: false })
+    .limit(3);
+
+  const featured = (data ?? []) as Tutor[];
+
   return (
     <main>
       <section className="container" style={{ padding: '4rem 0 2rem' }}>
@@ -42,17 +55,19 @@ export default function HomePage() {
           <div>
             <h2 className="section-title">Featured verified tutors</h2>
             <p className="subtitle" style={{ marginTop: '0.5rem' }}>
-              Sample profiles from the Stunion tutor network.
+              {featured.length > 0 ? 'Active tutors from the Stunion network.' : 'Tutors coming soon — check back shortly.'}
             </p>
           </div>
           <Link href="/tutors" className="button secondary">View all</Link>
         </div>
 
-        <div className="grid grid-3">
-          {tutors.slice(0, 3).map((tutor) => (
-            <TutorCard key={tutor.id} tutor={tutor} />
-          ))}
-        </div>
+        {featured.length > 0 && (
+          <div className="grid grid-3">
+            {featured.map((tutor) => (
+              <TutorCard key={tutor.id} tutor={tutor} />
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );

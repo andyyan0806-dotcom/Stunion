@@ -32,6 +32,11 @@ export function Nav() {
               Admin
             </Link>
           )}
+          {role === 'parent' && (
+            <Link href="/my-bookings" className="button secondary" style={{ padding: '0.6rem 1rem', fontSize: '0.9rem' }} onClick={() => setOpen(false)}>
+              My bookings
+            </Link>
+          )}
           <Link href="/settings" className="button secondary" style={{ padding: '0.6rem 1rem', fontSize: '0.9rem' }} onClick={() => setOpen(false)}>
             Settings
           </Link>
