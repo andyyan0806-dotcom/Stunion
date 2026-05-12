@@ -25,17 +25,18 @@ export default function DashboardPage() {
 
     async function load() {
       const supabase = getBrowserClient();
-      const email = user!.email!;
 
-      const [tutorRes, bookingsRes, introRes] = await Promise.all([
-        supabase.from('tutors').select('*').eq('user_id', user!.id).maybeSingle(),
-        supabase.from('bookings').select('*').eq('tutor_id', email).order('created_at', { ascending: false }).limit(20),
-        supabase.from('intro_calls').select('*').order('requested_at', { ascending: false }).limit(20),
-      ]);
-
-      if (tutorRes.data) setTutorProfile(tutorRes.data as Tutor);
-      if (bookingsRes.data) setBookings(bookingsRes.data as Booking[]);
-      if (introRes.data) setIntroCalls(introRes.data as IntroCall[]);
+      const tutorRes = await supabase.from('tutors').select('*').eq('user_id', user!.id).maybeSingle();
+      const tutor = tutorRes.data as Tutor | null;
+      if (tutor) {
+        setTutorProfile(tutor);
+        const [bookingsRes, introRes] = await Promise.all([
+          supabase.from('bookings').select('*').eq('tutor_id', tutor.id).order('created_at', { ascending: false }).limit(20),
+          supabase.from('intro_calls').select('*').eq('tutor_id', tutor.id).order('requested_at', { ascending: false }).limit(20),
+        ]);
+        if (bookingsRes.data) setBookings(bookingsRes.data as Booking[]);
+        if (introRes.data) setIntroCalls(introRes.data as IntroCall[]);
+      }
       setDataLoading(false);
     }
 
@@ -58,12 +59,14 @@ export default function DashboardPage() {
   const totalEarnings = bookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + (b.payout_amount ?? 0), 0);
 
   async function updateBookingStatus(id: string, status: string) {
-    await getBrowserClient().from('bookings').update({ status }).eq('id', id);
+    if (!tutorProfile) return;
+    await getBrowserClient().from('bookings').update({ status }).eq('id', id).eq('tutor_id', tutorProfile.id);
     setBookings(prev => prev.map(x => x.id === id ? { ...x, status: status as Booking['status'] } : x));
   }
 
   async function acceptIntroCall(id: string) {
-    await getBrowserClient().from('intro_calls').update({ status: 'accepted' }).eq('id', id);
+    if (!tutorProfile) return;
+    await getBrowserClient().from('intro_calls').update({ status: 'accepted' }).eq('id', id).eq('tutor_id', tutorProfile.id);
     setIntroCalls(prev => prev.map(x => x.id === id ? { ...x, status: 'accepted' as IntroCall['status'] } : x));
   }
 

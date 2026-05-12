@@ -16,13 +16,13 @@ const inputStyle: React.CSSProperties = {
 };
 
 type Tab = 'login' | 'signup';
-type Role = 'parent' | 'tutor';
+type Role = 'parent/student' | 'tutor';
 
 function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'signup' ? 'signup' : 'login');
-  const [role, setRole] = useState<Role>('parent');
+  const [role, setRole] = useState<Role>('parent/student');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -50,13 +50,12 @@ function AuthPage() {
     const { data, error: err } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: { name, role },
+      },
     });
     if (err) { setError(err.message); setLoading(false); return; }
-
-    if (data.user) {
-      await supabase.from('users').insert([{ id: data.user.id, email, name, role }]);
-    }
 
     if (role === 'tutor') {
       router.push('/onboard');
@@ -141,7 +140,7 @@ function AuthPage() {
             <div>
               <p style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>I am a…</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                {(['parent', 'tutor'] as Role[]).map(r => (
+                {(['parent/student', 'tutor'] as Role[]).map(r => (
                   <button
                     key={r}
                     type="button"
@@ -157,7 +156,7 @@ function AuthPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    {r === 'parent' ? 'Parent / Student' : 'Tutor'}
+                    {r === 'parent/student' ? 'Parent / Student' : 'Tutor'}
                   </button>
                 ))}
               </div>

@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { getBrowserClient } from '../lib/supabaseClient';
 
-type Role = 'parent' | 'tutor' | 'admin' | null;
+type Role = 'parent/student' | 'tutor' | 'admin' | null;
 
 interface AuthState {
   user: User | null;

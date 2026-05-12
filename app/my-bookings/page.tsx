@@ -29,12 +29,15 @@ export default function MyBookingsPage() {
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    getBrowserClient().auth.getSession().then(({ data }: { data: { session: { user: { email?: string } } | null } }) => {
-      const userEmail = data.session?.user?.email ?? null;
+    getBrowserClient().auth.getSession().then(({ data }: { data: { session: { user: { email?: string }; access_token: string } | null } }) => {
+      const session = data.session;
+      const userEmail = session?.user?.email ?? null;
       setEmail(userEmail);
-      if (!userEmail) { setLoading(false); return; }
+      if (!session || !userEmail) { setLoading(false); return; }
 
-      fetch(`/api/bookings?email=${encodeURIComponent(userEmail)}`)
+      fetch('/api/bookings', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
         .then(r => r.json())
         .then(d => setBookings(d.bookings ?? []))
         .finally(() => setLoading(false));

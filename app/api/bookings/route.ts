@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '../../../lib/supabaseClient';
+import { getRequestUser } from '../../../lib/serverAuth';
 import { sendBookingNotificationToTutor, sendBookingConfirmationToParent } from '../../../lib/email';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get('email');
-  if (!email) return NextResponse.json({ error: 'email is required' }, { status: 400 });
+  const user = await getRequestUser(request);
+  if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
 
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('bookings')
     .select('*, tutors(name, photo_url, subjects)')
-    .eq('parent_email', email)
+    .eq('parent_email', user.email)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
