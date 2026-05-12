@@ -15,55 +15,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const supabase = getSupabaseClient();
-  const contentType = request.headers.get('content-type') ?? '';
+  const fields = await request.json();
 
-  let fields: Record<string, string> = {};
-  let photoUrl: string | null = null;
-  let transcriptUrl: string | null = null;
-  let scoreUrl: string | null = null;
-
-  if (contentType.includes('multipart/form-data')) {
-    const fd = await request.formData();
-
-    const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-    const ALLOWED_DOC_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-
-    async function uploadFile(file: File, bucket: string, allowedTypes: string[]): Promise<string | null> {
-      if (!file || file.size === 0) return null;
-      if (file.size > MAX_FILE_SIZE) return null;
-      if (!allowedTypes.includes(file.type)) return null;
-      const ext = file.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '') ?? 'bin';
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const bytes = await file.arrayBuffer();
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(path, bytes, { contentType: file.type, upsert: false });
-      if (error || !data) return null;
-      if (bucket === 'photos') {
-        return supabase.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
-      }
-      return data.path;
-    }
-
-    const photo = fd.get('photo') as File | null;
-    const transcript = fd.get('transcript') as File | null;
-    const scoreDoc = fd.get('score_doc') as File | null;
-
-    if (photo) photoUrl = await uploadFile(photo, 'photos', ALLOWED_IMAGE_TYPES);
-    if (transcript) transcriptUrl = await uploadFile(transcript, 'credentials', ALLOWED_DOC_TYPES);
-    if (scoreDoc) scoreUrl = await uploadFile(scoreDoc, 'credentials', ALLOWED_DOC_TYPES);
-
-    for (const [key, val] of fd.entries()) {
-      if (typeof val === 'string') fields[key] = val;
-    }
-  } else {
-    fields = await request.json();
-  }
-
-  let subjects: string[] = [];
-  try { subjects = fields.subjects ? JSON.parse(fields.subjects) : []; } catch { subjects = []; }
-  if (!Array.isArray(subjects) || subjects.length === 0) {
+  const subjects: string[] = Array.isArray(fields.subjects) ? fields.subjects : [];
+  if (subjects.length === 0) {
     return NextResponse.json({ error: 'At least one subject is required.' }, { status: 400 });
   }
   if (!fields.email || !fields.phone || !fields.language) {
@@ -89,10 +44,10 @@ export async function POST(request: Request) {
     language: fields.language,
     verified: false,
     status: 'pending',
-    intro_call_enabled: fields.intro_call_enabled === 'true',
-    photo_url: photoUrl,
-    transcript_url: transcriptUrl,
-    score_url: scoreUrl,
+    intro_call_enabled: fields.intro_call_enabled === true,
+    photo_url: fields.photo_url || null,
+    transcript_url: fields.transcript_url || null,
+    score_url: fields.score_url || null,
     created_at: new Date().toISOString(),
   };
 

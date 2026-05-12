@@ -16,19 +16,37 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function TutorOnboardPage() {
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [education, setEducation] = useState('');
+  const [scores, setScores] = useState('');
+  const [language, setLanguage] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [bio, setBio] = useState('');
   const [rate, setRate] = useState(80000);
   const [introCall, setIntroCall] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState('');
+
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+  const [scoreFile, setScoreFile] = useState<File | null>(null);
 
   useEffect(() => {
-    getBrowserClient().auth.getSession().then(({ data }: { data: { session: { user: { id: string } } | null } }) => {
-      if (data.session?.user?.id) setUserId(data.session.user.id);
+    const supabase = getBrowserClient();
+    supabase.auth.getSession().then(({ data }: { data: { session: { user: { id: string; email?: string } } | null } }) => {
+      const user = data.session?.user;
+      if (!user) return;
+      setUserId(user.id);
+      if (user.email) setEmail(user.email);
+      supabase.from('users').select('name').eq('id', user.id).maybeSingle().then(({ data: u }: { data: { name: string } | null }) => {
+        if (u?.name) setUserName(u.name);
+      });
     });
   }, []);
 
@@ -38,6 +56,18 @@ export default function TutorOnboardPage() {
     );
   }
 
+  async function uploadFile(file: File, bucket: string): Promise<string | null> {
+    const ext = file.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '') ?? 'bin';
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const supabase = getBrowserClient();
+    const { data, error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadError || !data) return null;
+    if (bucket === 'photos') return supabase.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
+    return data.path;
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!agreed) { setError('You must agree to the contractor agreement to continue.'); return; }
@@ -45,15 +75,31 @@ export default function TutorOnboardPage() {
     setLoading(true);
     setError(null);
 
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    fd.set('subjects', JSON.stringify(selectedSubjects));
-    fd.set('bio', bio);
-    fd.set('rate', String(rate));
-    fd.set('intro_call_enabled', String(introCall));
-    if (userId) fd.set('user_id', userId);
+    let photoUrl: string | null = null;
+    let transcriptUrl: string | null = null;
+    let scoreUrl: string | null = null;
 
-    const res = await fetch('/api/tutors', { method: 'POST', body: fd });
+    if (photoFile) photoUrl = await uploadFile(photoFile, 'photos');
+    if (transcriptFile) transcriptUrl = await uploadFile(transcriptFile, 'credentials');
+    if (scoreFile) scoreUrl = await uploadFile(scoreFile, 'credentials');
+
+    const res = await fetch('/api/tutors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email, phone, education, scores, language, bio,
+        name: userName,
+        subjects: selectedSubjects,
+        rate,
+        intro_call_enabled: introCall,
+        user_id: userId,
+        photo_url: photoUrl,
+        transcript_url: transcriptUrl,
+        score_url: scoreUrl,
+        promo_code: promoCode,
+      }),
+    });
+
     const json = await res.json();
     if (!res.ok) { setError(json.error || 'Submission failed. Please try again.'); setLoading(false); return; }
     setSubmitted(true);
@@ -65,7 +111,7 @@ export default function TutorOnboardPage() {
         <div className="card" style={{ padding: '2rem', maxWidth: '520px' }}>
           <h1 style={{ margin: 0, fontSize: '1.4rem' }}>Application submitted</h1>
           <p style={{ marginTop: '0.75rem', color: '#374151', lineHeight: 1.7 }}>
-            Your profile is under review. We manually verify every transcript and test score within 48 hours. You will receive an email once your profile is approved and live.
+            Your profile is under review. We manually verify every profile within 48 hours. You will receive an email once your profile is approved and live.
           </p>
           <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', background: '#f0fdf4', borderRadius: '0.75rem', border: '1px solid #bbf7d0' }}>
             <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534' }}>
@@ -84,7 +130,7 @@ export default function TutorOnboardPage() {
           <p className="tag">Tutor onboarding</p>
           <h1 className="section-title">Create your verified tutor profile.</h1>
           <p className="subtitle" style={{ marginTop: '1rem' }}>
-            Upload your transcript and test scores. Every profile is manually reviewed before going live. Platform fee is 10% per session; 3.3% withholding disclosed at payment.
+            Platform fee is 10% per session; 3.3% withholding disclosed at payment. Credentials are optional but required for full verification.
           </p>
         </div>
 
@@ -95,11 +141,11 @@ export default function TutorOnboardPage() {
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Contact information</h2>
             <label style={{ display: 'grid', gap: '0.4rem' }}>
               Email
-              <input name="email" type="email" required placeholder="you@university.edu" style={inputStyle} />
+              <input type="email" required placeholder="you@university.edu" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
             </label>
             <label style={{ display: 'grid', gap: '0.4rem' }}>
               Korean phone number
-              <input name="phone" type="tel" required placeholder="010-1234-5678" style={inputStyle} />
+              <input type="tel" required placeholder="010-1234-5678" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
             </label>
           </section>
 
@@ -109,7 +155,7 @@ export default function TutorOnboardPage() {
           <section style={{ display: 'grid', gap: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Profile photo</h2>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Head-and-shoulders, clear face. Required for profile activation.</p>
-            <input name="photo" type="file" accept="image/*" required style={{ fontSize: '0.9rem' }} />
+            <input name="photo" type="file" accept="image/*" required onChange={e => setPhotoFile(e.target.files?.[0] ?? null)} style={{ fontSize: '0.9rem' }} />
           </section>
 
           <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: 0 }} />
@@ -117,24 +163,24 @@ export default function TutorOnboardPage() {
           {/* Credentials */}
           <section style={{ display: 'grid', gap: '1rem' }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Verified credentials</h2>
-              <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: '#6b7280' }}>Reviewed within 48h. PDF or clear photo of the official document.</p>
+              <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Credentials <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.9rem' }}>(optional)</span></h2>
+              <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: '#6b7280' }}>PDF or clear photo. You can submit without these — profiles without verified credentials will remain unapproved until uploaded.</p>
             </div>
             <label style={{ display: 'grid', gap: '0.4rem' }}>
               University transcript
-              <input name="transcript" type="file" accept=".pdf,image/*" required style={{ fontSize: '0.9rem' }} />
+              <input type="file" accept=".pdf,image/*" onChange={e => setTranscriptFile(e.target.files?.[0] ?? null)} style={{ fontSize: '0.9rem' }} />
             </label>
             <label style={{ display: 'grid', gap: '0.4rem' }}>
-              Official test scores (SAT score report / IB results / AP score report)
-              <input name="score_doc" type="file" accept=".pdf,image/*" required style={{ fontSize: '0.9rem' }} />
+              Official test scores (SAT / IB / AP)
+              <input type="file" accept=".pdf,image/*" onChange={e => setScoreFile(e.target.files?.[0] ?? null)} style={{ fontSize: '0.9rem' }} />
             </label>
             <label style={{ display: 'grid', gap: '0.4rem' }}>
-              University / school (as shown on transcript)
-              <input name="education" type="text" required placeholder="e.g. Yonsei University, Applied Mathematics" style={inputStyle} />
+              University / school <span style={{ fontWeight: 400, color: '#9ca3af' }}>(as shown on transcript)</span>
+              <input type="text" placeholder="e.g. Yonsei University, Applied Mathematics" value={education} onChange={e => setEducation(e.target.value)} style={inputStyle} />
             </label>
             <label style={{ display: 'grid', gap: '0.4rem' }}>
-              Score summary (shown on profile)
-              <input name="scores" type="text" placeholder="e.g. IB 45, SAT 1570" style={inputStyle} />
+              Score summary <span style={{ fontWeight: 400, color: '#9ca3af' }}>(shown on profile)</span>
+              <input type="text" placeholder="e.g. IB 45, SAT 1570" value={scores} onChange={e => setScores(e.target.value)} style={inputStyle} />
             </label>
           </section>
 
@@ -142,12 +188,11 @@ export default function TutorOnboardPage() {
 
           {/* Bio */}
           <section style={{ display: 'grid', gap: '0.75rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Bio <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.9rem' }}>— max 500 characters</span></h2>
+            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Bio <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.9rem' }}>— max 500 characters (optional)</span></h2>
             <div>
               <textarea
                 rows={4}
                 maxLength={500}
-                required
                 placeholder="Describe your teaching approach and relevant experience."
                 value={bio}
                 onChange={e => setBio(e.target.value)}
@@ -225,18 +270,8 @@ export default function TutorOnboardPage() {
           <section style={{ display: 'grid', gap: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Hourly rate</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <input
-                type="range"
-                min={30000}
-                max={200000}
-                step={5000}
-                value={rate}
-                onChange={e => setRate(Number(e.target.value))}
-                style={{ flex: 1 }}
-              />
-              <span style={{ fontWeight: 700, fontSize: '1.15rem', minWidth: '110px', textAlign: 'right' }}>
-                ₩{rate.toLocaleString()}
-              </span>
+              <input type="range" min={30000} max={200000} step={5000} value={rate} onChange={e => setRate(Number(e.target.value))} style={{ flex: 1 }} />
+              <span style={{ fontWeight: 700, fontSize: '1.15rem', minWidth: '110px', textAlign: 'right' }}>₩{rate.toLocaleString()}</span>
             </div>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
               After 10% platform fee and 3.3% withholding, you receive ₩{Math.round(rate * 0.9 * 0.967).toLocaleString()} net per hour.
@@ -248,7 +283,7 @@ export default function TutorOnboardPage() {
           {/* Language */}
           <section style={{ display: 'grid', gap: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Teaching language</h2>
-            <select name="language" required style={inputStyle}>
+            <select required value={language} onChange={e => setLanguage(e.target.value)} style={inputStyle}>
               <option value="">Select…</option>
               <option value="korean">Korean</option>
               <option value="english">English</option>
@@ -262,15 +297,10 @@ export default function TutorOnboardPage() {
           <section style={{ display: 'grid', gap: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>15-minute intro call</h2>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.6 }}>
-              Offer parents a free 15-min call before their first booking. You get an "Intro call" badge on your profile which increases booking rate. You provide the Zoom / Google Meet link.
+              Offer parents a free 15-min call before their first booking. You get an "Intro call" badge on your profile which increases booking rate.
             </p>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={introCall}
-                onChange={e => setIntroCall(e.target.checked)}
-                style={{ width: '1.1rem', height: '1.1rem' }}
-              />
+              <input type="checkbox" checked={introCall} onChange={e => setIntroCall(e.target.checked)} style={{ width: '1.1rem', height: '1.1rem' }} />
               <span>I'm open to 15-minute intro calls before a first booking</span>
             </label>
           </section>
@@ -280,7 +310,7 @@ export default function TutorOnboardPage() {
           {/* Promo code */}
           <section style={{ display: 'grid', gap: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Promo code <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.9rem' }}>(optional)</span></h2>
-            <input name="promo_code" type="text" placeholder="e.g. FOUNDER15" style={inputStyle} />
+            <input type="text" placeholder="e.g. FOUNDER15" value={promoCode} onChange={e => setPromoCode(e.target.value)} style={inputStyle} />
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
               Founder tutors receive code FOUNDER15 — waives the 10% platform fee on your first 5 sessions.
             </p>
@@ -295,12 +325,7 @@ export default function TutorOnboardPage() {
               By checking the box below, I agree to operate as an independent contractor on Stunion. I understand that Stunion charges a 10% transaction fee per session and that 3.3% withholding tax (원천징수) will be deducted from my gross payout on the platform's behalf per Korean tax law. Payout is released within 48 hours of parent session confirmation. Stunion issues a withholding receipt for my tax filing.
             </p>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={e => setAgreed(e.target.checked)}
-                style={{ marginTop: '0.2rem', width: '1.1rem', height: '1.1rem', flexShrink: 0 }}
-              />
+              <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ marginTop: '0.2rem', width: '1.1rem', height: '1.1rem', flexShrink: 0 }} />
               <span style={{ fontSize: '0.9rem' }}>I agree to the independent contractor terms above.</span>
             </label>
           </section>

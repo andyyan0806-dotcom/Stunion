@@ -28,7 +28,6 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
 
   // Tutor-only fields
-  const [bio, setBio] = useState('');
   const [rate, setRate] = useState(80000);
   const [language, setLanguage] = useState('both');
   const [introCall, setIntroCall] = useState(false);
@@ -56,7 +55,6 @@ export default function SettingsPage() {
       supabase.from('tutors').select('*').eq('user_id', user.id).maybeSingle().then(({ data }: { data: TutorRow | null }) => {
         if (!data) return;
         setTutorId(data.id);
-        setBio(data.bio ?? '');
         setRate(data.rate ?? 80000);
         setLanguage(data.language ?? 'both');
         setIntroCall(data.intro_call_enabled ?? false);
@@ -78,7 +76,7 @@ export default function SettingsPage() {
     await supabase.from('users').update({ name, phone }).eq('id', user.id);
 
     if (role === 'tutor' && tutorId) {
-      await supabase.from('tutors').update({ bio, rate, language, intro_call_enabled: introCall, subjects: selectedSubjects }).eq('id', tutorId);
+      await supabase.from('tutors').update({ rate, language, intro_call_enabled: introCall, subjects: selectedSubjects }).eq('id', tutorId);
     }
 
     setMsg({ type: 'success', text: 'Profile saved.' });
@@ -145,18 +143,6 @@ export default function SettingsPage() {
 
           {role === 'tutor' && (
             <>
-              <label style={{ display: 'grid', gap: '0.4rem', fontSize: '0.9rem', fontWeight: 500 }}>
-                Bio <span style={{ fontWeight: 400, color: '#9ca3af' }}>— max 500 characters</span>
-                <textarea
-                  rows={4}
-                  maxLength={500}
-                  value={bio}
-                  onChange={e => setBio(e.target.value)}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-                <span style={{ fontSize: '0.8rem', color: bio.length >= 450 ? '#dc2626' : '#9ca3af', textAlign: 'right' }}>{bio.length} / 500</span>
-              </label>
-
               <label style={{ display: 'grid', gap: '0.4rem', fontSize: '0.9rem', fontWeight: 500 }}>
                 Hourly rate
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
