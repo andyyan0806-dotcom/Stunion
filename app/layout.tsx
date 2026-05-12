@@ -7,6 +7,7 @@ import { AuthProvider } from '../components/AuthProvider';
 export const metadata: Metadata = {
   title: 'Stunion',
   description: 'Verified SAT, IB, and AP tutors for international school families in Korea.',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
