@@ -17,6 +17,8 @@ interface PendingTutor {
   status: string;
   transcript_url?: string;
   score_url?: string;
+  transcript_signed_url?: string;
+  score_signed_url?: string;
   created_at: string;
 }
 
@@ -170,8 +172,22 @@ export default function AdminDashboard() {
                       {t.phone && <span style={{ color: '#6b7280' }}> · {t.phone}</span>}
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
-                      {t.transcript_url && <a href={`https://nvltnfeqdsmpkoydeoyr.supabase.co/storage/v1/object/authenticated/credentials/${t.transcript_url}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#4338ca' }}>View transcript →</a>}
-                      {t.score_url && <a href={`https://nvltnfeqdsmpkoydeoyr.supabase.co/storage/v1/object/authenticated/credentials/${t.score_url}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#4338ca' }}>View score doc →</a>}
+                      {t.transcript_signed_url
+                        ? <a href={t.transcript_signed_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#4338ca' }}>
+                            {fileLabel(t.transcript_url)} transcript →
+                          </a>
+                        : t.transcript_url
+                          ? <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Transcript (link expired — reload)</span>
+                          : <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>No transcript uploaded</span>
+                      }
+                      {t.score_signed_url
+                        ? <a href={t.score_signed_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#4338ca' }}>
+                            {fileLabel(t.score_url)} score doc →
+                          </a>
+                        : t.score_url
+                          ? <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Score doc (link expired — reload)</span>
+                          : <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>No score doc uploaded</span>
+                      }
                     </div>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>Applied {new Date(t.created_at).toLocaleDateString()}</p>
                   </div>
@@ -243,6 +259,13 @@ export default function AdminDashboard() {
       </div>
     </main>
   );
+}
+
+function fileLabel(path?: string): string {
+  const ext = path?.split('.').pop()?.toLowerCase() ?? '';
+  if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) return '🖼';
+  if (ext === 'pdf') return '📄';
+  return '📎';
 }
 
 const formInputStyle: React.CSSProperties = {

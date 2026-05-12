@@ -28,6 +28,25 @@ export async function GET(request: Request) {
 
   const gmv = (completedBookings ?? []).reduce((sum, b) => sum + (b.amount ?? 0), 0);
 
+  // Generate 1-hour signed URLs for private credential files
+  const approvalsWithUrls = await Promise.all(
+    (approvals ?? []).map(async (t: Record<string, string>) => {
+      const [transcriptSigned, scoreSigned] = await Promise.all([
+        t.transcript_url
+          ? supabase.storage.from('credentials').createSignedUrl(t.transcript_url, 3600)
+          : null,
+        t.score_url
+          ? supabase.storage.from('credentials').createSignedUrl(t.score_url, 3600)
+          : null,
+      ]);
+      return {
+        ...t,
+        transcript_signed_url: transcriptSigned?.data?.signedUrl ?? null,
+        score_signed_url: scoreSigned?.data?.signedUrl ?? null,
+      };
+    })
+  );
+
   return NextResponse.json({
     metrics: {
       verifiedTutors: verifiedCount ?? 0,
@@ -35,7 +54,7 @@ export async function GET(request: Request) {
       gmv,
       openDisputes: (disputes ?? []).length,
     },
-    approvals: approvals ?? [],
+    approvals: approvalsWithUrls,
     disputes: disputes ?? [],
   });
 }
