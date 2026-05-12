@@ -25,7 +25,6 @@ function AuthPage() {
   const [role, setRole] = useState<Role>('parent');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +55,7 @@ function AuthPage() {
     if (err) { setError(err.message); setLoading(false); return; }
 
     if (data.user) {
-      await supabase.from('users').insert([{ id: data.user.id, email, phone, name, role }]);
+      await supabase.from('users').insert([{ id: data.user.id, email, name, role }]);
     }
 
     if (role === 'tutor') {
@@ -176,10 +175,6 @@ function AuthPage() {
             <label style={{ display: 'grid', gap: '0.4rem', fontSize: '0.9rem', fontWeight: 500 }}>
               Email
               <input type="email" required placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
-            </label>
-            <label style={{ display: 'grid', gap: '0.4rem', fontSize: '0.9rem', fontWeight: 500 }}>
-              Korean phone number
-              <input type="tel" required placeholder="010-1234-5678" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
             </label>
             <label style={{ display: 'grid', gap: '0.4rem', fontSize: '0.9rem', fontWeight: 500 }}>
               Password <span style={{ fontWeight: 400, color: '#9ca3af' }}>— min 8 characters</span>
