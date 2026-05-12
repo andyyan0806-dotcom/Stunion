@@ -5,15 +5,16 @@ import { IntroCallForm } from '../../../components/IntroCallForm';
 import { ReviewsSection } from '../../../components/ReviewsSection';
 
 interface TutorProfilePageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function TutorProfilePage({ params }: TutorProfilePageProps) {
+  const { id } = await params;
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('tutors')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .maybeSingle();
 
   if (error || !data) {
