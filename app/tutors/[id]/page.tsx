@@ -11,11 +11,13 @@ interface TutorProfilePageProps {
 export default async function TutorProfilePage({ params }: TutorProfilePageProps) {
   const { id } = await params;
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('tutors')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+  const [{ data, error }, { data: statsData }] = await Promise.all([
+    supabase.from('tutors').select('*').eq('id', id).maybeSingle(),
+    supabase.from('bookings').select('duration_minutes').eq('tutor_id', id).eq('status', 'completed'),
+  ]);
+
+  const sessionCount = statsData?.length ?? 0;
+  const totalHours = Math.round((statsData?.reduce((sum, b) => sum + (b.duration_minutes ?? 0), 0) ?? 0) / 60);
 
   if (error || !data) {
     return (
@@ -65,9 +67,9 @@ export default async function TutorProfilePage({ params }: TutorProfilePageProps
                   Top Rated
                 </span>
               )}
-              {tutor.vouch_count > 0 && (
+              {sessionCount > 0 && (
                 <span style={{ background: '#f5f3ff', color: '#7c3aed', padding: '0.3rem 0.6rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid #ddd6fe' }}>
-                  🤝 {tutor.vouch_count} peer vouch{tutor.vouch_count > 1 ? 'es' : ''}
+                  {sessionCount} {sessionCount === 1 ? 'session' : 'sessions'} · {totalHours} hrs on Stunion
                 </span>
               )}
             </div>

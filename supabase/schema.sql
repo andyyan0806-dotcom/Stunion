@@ -115,17 +115,6 @@ create table if not exists messages (
   created_at      timestamptz default now()
 );
 
--- vouch_count column added to tutors:
--- alter table tutors add column if not exists vouch_count integer not null default 0;
-
-create table if not exists vouches (
-  id             uuid primary key default gen_random_uuid(),
-  from_tutor_id  text not null references tutors(id) on delete cascade,
-  to_tutor_id    text not null references tutors(id) on delete cascade,
-  created_at     timestamptz default now(),
-  unique(from_tutor_id)
-);
-
 create table if not exists disputes (
   id               uuid primary key default gen_random_uuid(),
   booking_id       uuid references bookings(id),

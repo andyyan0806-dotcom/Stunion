@@ -14,9 +14,6 @@ export default function DashboardPage() {
   const [tutorProfile, setTutorProfile] = useState<Tutor | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [introCalls, setIntroCalls] = useState<IntroCall[]>([]);
-  const [vouchState, setVouchState] = useState<{ hasVouched: boolean; vouchedName?: string } | null>(null);
-  const [vouchInput, setVouchInput] = useState('');
-  const [vouchMsg, setVouchMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -33,19 +30,12 @@ export default function DashboardPage() {
       const tutor = tutorRes.data as Tutor | null;
       if (tutor) {
         setTutorProfile(tutor);
-        const supabaseSession = await getBrowserClient().auth.getSession();
-        const token = supabaseSession.data.session?.access_token ?? '';
-        const [bookingsRes, introRes, vouchRes] = await Promise.all([
+        const [bookingsRes, introRes] = await Promise.all([
           supabase.from('bookings').select('*').eq('tutor_id', tutor.id).order('created_at', { ascending: false }).limit(20),
           supabase.from('intro_calls').select('*').eq('tutor_id', tutor.id).order('requested_at', { ascending: false }).limit(20),
-          fetch('/api/vouches', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
         ]);
         if (bookingsRes.data) setBookings(bookingsRes.data as Booking[]);
         if (introRes.data) setIntroCalls(introRes.data as IntroCall[]);
-        setVouchState({
-          hasVouched: vouchRes.hasVouched ?? false,
-          vouchedName: vouchRes.vouch?.tutors?.name,
-        });
       }
       setDataLoading(false);
     }
@@ -67,24 +57,6 @@ export default function DashboardPage() {
   const upcomingBookings = bookings.filter(b => b.status === 'accepted');
   const pendingCalls = introCalls.filter(c => c.status === 'pending');
   const totalEarnings = bookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + (b.payout_amount ?? 0), 0);
-
-  async function submitVouch() {
-    if (!vouchInput.trim()) return;
-    const { data: { session } } = await getBrowserClient().auth.getSession();
-    const res = await fetch('/api/vouches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
-      body: JSON.stringify({ toTutorId: vouchInput.trim() }),
-    });
-    const result = await res.json();
-    if (res.ok) {
-      setVouchState({ hasVouched: true, vouchedName: vouchInput.trim() });
-      setVouchMsg({ ok: true, text: 'Vouch sent! It is now shown on their profile.' });
-    } else {
-      setVouchMsg({ ok: false, text: result.error ?? 'Something went wrong.' });
-    }
-    setTimeout(() => setVouchMsg(null), 4000);
-  }
 
   async function updateBookingStatus(id: string, status: string) {
     if (!tutorProfile) return;
@@ -187,41 +159,6 @@ export default function DashboardPage() {
             )}
           </section>
         )}
-
-        {/* Vouch */}
-        {tutorProfile?.status === 'verified' || tutorProfile?.status === 'active' ? (
-          <section>
-            <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.05rem' }}>Your peer vouch</h2>
-            <div className="card" style={{ padding: '1.25rem', display: 'grid', gap: '0.75rem' }}>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#374151' }}>
-                Every verified tutor gets <strong>1 vouch</strong> to give to a fellow tutor. Vouches appear as a purple badge on the recipient&apos;s public profile.
-              </p>
-              {vouchState?.hasVouched ? (
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#16a34a', fontWeight: 600 }}>
-                  ✔ You&apos;ve vouched for {vouchState.vouchedName ?? 'a tutor'}. Your vouch is live on their profile.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <input
-                    type="text"
-                    placeholder="Tutor ID (from their profile URL)"
-                    value={vouchInput}
-                    onChange={e => setVouchInput(e.target.value)}
-                    style={{ flex: 1, minWidth: '200px', padding: '0.75rem', borderRadius: '0.6rem', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
-                  />
-                  <button type="button" className="button" onClick={submitVouch} style={{ whiteSpace: 'nowrap' }}>
-                    Send vouch
-                  </button>
-                </div>
-              )}
-              {vouchMsg && (
-                <p style={{ margin: 0, fontSize: '0.85rem', color: vouchMsg.ok ? '#16a34a' : '#b91c1c' }}>
-                  {vouchMsg.text}
-                </p>
-              )}
-            </div>
-          </section>
-        ) : null}
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/settings" className="button secondary">Manage profile & settings</Link>

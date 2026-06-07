@@ -22,7 +22,6 @@ export interface Tutor {
   verified: boolean;
   status: TutorStatus;
   intro_call_enabled: boolean;
-  vouch_count: number;
   photo_url?: string;
   transcript_url?: string;
   score_url?: string;
