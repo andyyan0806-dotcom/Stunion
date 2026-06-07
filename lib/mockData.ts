@@ -217,6 +217,7 @@ export const tutors: Tutor[] = [
     verified: true,
     status: 'active',
     intro_call_enabled: true,
+    vouch_count: 0,
   },
   {
     id: 'tutor-jun',
@@ -232,6 +233,7 @@ export const tutors: Tutor[] = [
     verified: true,
     status: 'active',
     intro_call_enabled: false,
+    vouch_count: 0,
   },
   {
     id: 'tutor-hana',
@@ -247,6 +249,7 @@ export const tutors: Tutor[] = [
     verified: true,
     status: 'active',
     intro_call_enabled: true,
+    vouch_count: 0,
   },
   {
     id: 'tutor-soo',
@@ -262,5 +265,6 @@ export const tutors: Tutor[] = [
     verified: true,
     status: 'active',
     intro_call_enabled: false,
+    vouch_count: 0,
   },
 ];

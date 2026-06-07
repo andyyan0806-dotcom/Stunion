@@ -55,7 +55,18 @@ function AuthPage() {
         data: { name, role },
       },
     });
-    if (err) { setError(err.message); setLoading(false); return; }
+    if (err) {
+      const isDuplicate = err.message.toLowerCase().includes('already registered') ||
+                          err.message.toLowerCase().includes('already exists');
+      if (isDuplicate) {
+        setError('An account with this email already exists. Please log in.');
+        setTab('login');
+      } else {
+        setError(err.message);
+      }
+      setLoading(false);
+      return;
+    }
 
     if (role === 'tutor') {
       router.push('/onboard');
