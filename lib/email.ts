@@ -79,7 +79,7 @@ export async function sendBookingConfirmationToParent({
     year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul',
   });
-  const fee = feeWaived ? 0 : Math.round(grossAmount * 0.1);
+  const fee = feeWaived ? 0 : Math.round(grossAmount * 0.07);
 
   const resend = getResend();
   if (!resend) return;

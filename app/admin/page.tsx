@@ -22,6 +22,19 @@ interface PendingTutor {
   created_at: string;
 }
 
+interface PendingPayment {
+  id: string;
+  student_name?: string;
+  sender_name?: string;
+  parent_email: string;
+  amount: number;
+  booking_date: string;
+  created_at: string;
+  status: string;
+  payment_notified: boolean;
+  tutors?: { name: string };
+}
+
 interface Dispute {
   id: string;
   booking_id: string;
@@ -43,6 +56,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [pending, setPending] = useState<PendingTutor[]>([]);
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
@@ -63,6 +77,7 @@ export default function AdminDashboard() {
     setMetrics(data.metrics ?? null);
     setPending(data.approvals ?? []);
     setDisputes(data.disputes ?? []);
+    setPendingPayments(data.pendingPayments ?? []);
     setLoading(false);
   }
 
@@ -91,6 +106,32 @@ export default function AdminDashboard() {
       setDisputes(cur => cur.filter(d => d.id !== disputeId));
       setActionMsg('Dispute resolved.');
       setTimeout(() => setActionMsg(null), 3000);
+    }
+  }
+
+  async function confirmPayment(bookingId: string) {
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ type: 'confirm-payment', bookingId }),
+    });
+    if (res.ok) {
+      setPendingPayments(cur => cur.filter(b => b.id !== bookingId));
+      setActionMsg('Payment confirmed — booking completed. Parent can now leave a review.');
+      setTimeout(() => setActionMsg(null), 4000);
+    }
+  }
+
+  async function declinePayment(bookingId: string) {
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ type: 'decline-payment', bookingId }),
+    });
+    if (res.ok) {
+      setPendingPayments(cur => cur.filter(b => b.id !== bookingId));
+      setActionMsg('Booking declined and cancelled.');
+      setTimeout(() => setActionMsg(null), 4000);
     }
   }
 
@@ -153,6 +194,60 @@ export default function AdminDashboard() {
             ))}
           </div>
         )}
+
+        {/* Pending payments */}
+        <div className="card" style={{ padding: '1.5rem', display: 'grid', gap: '1rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem' }}>
+            Pending payments
+            {pendingPayments.length > 0 && (
+              <span style={{ marginLeft: '0.6rem', background: '#fef2f2', color: '#b91c1c', fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', border: '1px solid #fecaca' }}>
+                {pendingPayments.length}
+              </span>
+            )}
+          </h2>
+          {pendingPayments.length === 0 ? (
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>No pending or active bookings.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              {pendingPayments.map(b => (
+                <div key={b.id} style={{ display: 'grid', gap: '0.75rem', padding: '1rem 1.25rem', background: b.payment_notified ? '#f0fdf4' : '#f8fafc', borderRadius: '0.75rem', border: `1px solid ${b.payment_notified ? '#bbf7d0' : '#e5e7eb'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'grid', gap: '0.3rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>
+                          송금자: {b.sender_name
+                            ? <span style={{ color: '#111827' }}>{b.sender_name}</span>
+                            : <span style={{ color: '#9ca3af', fontWeight: 400 }}>미입력</span>}
+                        </p>
+                        {b.payment_notified && (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#dcfce7', color: '#16a34a', border: '1px solid #86efac' }}>
+                            💸 송금 완료 알림
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151' }}>
+                        {b.student_name ?? '?'} → {b.tutors?.name ?? '?'} · <strong>₩{b.amount.toLocaleString()}</strong>
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
+                        {new Date(b.booking_date).toLocaleDateString('ko-KR')} · {b.parent_email} · {new Date(b.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button type="button" onClick={() => declinePayment(b.id)}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '9999px', border: '1px solid #fca5a5', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        Decline
+                      </button>
+                      <button type="button" onClick={() => confirmPayment(b.id)}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '9999px', border: 'none', background: '#16a34a', color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        ✓ Accept
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Approval queue */}
         <div className="card" style={{ padding: '1.5rem', display: 'grid', gap: '1rem' }}>

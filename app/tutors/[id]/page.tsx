@@ -65,6 +65,11 @@ export default async function TutorProfilePage({ params }: TutorProfilePageProps
                   Top Rated
                 </span>
               )}
+              {tutor.vouch_count > 0 && (
+                <span style={{ background: '#f5f3ff', color: '#7c3aed', padding: '0.3rem 0.6rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid #ddd6fe' }}>
+                  🤝 {tutor.vouch_count} peer vouch{tutor.vouch_count > 1 ? 'es' : ''}
+                </span>
+              )}
             </div>
             <p style={{ margin: '0.5rem 0 0', color: '#6b7280' }}>
               {tutor.education} · {langLabel}
@@ -118,7 +123,7 @@ export default async function TutorProfilePage({ params }: TutorProfilePageProps
             <p style={{ margin: '0 0 0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Booking terms</p>
             <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#6b7280', fontSize: '0.85rem', lineHeight: 1.8 }}>
               <li>Payment held in escrow until you confirm the session completed</li>
-              <li>10% platform fee + 3.3% withholding applied at checkout</li>
+              <li>7% platform fee + 3.3% withholding applied at checkout</li>
               <li>Refund available within 24h of session if you raise a dispute</li>
             </ul>
           </div>

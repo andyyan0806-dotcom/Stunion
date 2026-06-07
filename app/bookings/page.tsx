@@ -16,6 +16,10 @@ export default function BookingPage() {
   const [promoCode, setPromoCode] = useState('');
   const [promoValid, setPromoValid] = useState<boolean | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedBookingId, setSubmittedBookingId] = useState('');
+  const [submittedStudentName, setSubmittedStudentName] = useState('');
+  const [submittedSenderName, setSubmittedSenderName] = useState('');
+  const [notified, setNotified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
@@ -32,7 +36,7 @@ export default function BookingPage() {
   }, []);
 
   const grossAmount = tutor ? Math.round(tutor.rate * (duration / 60)) : 0;
-  const fee = promoValid ? 0 : Math.round(grossAmount * 0.1);
+  const fee = promoValid ? 0 : Math.round(grossAmount * 0.07);
   const tutorGross = grossAmount - fee;
   const withholding = Math.round(tutorGross * 0.033);
   const tutorNet = tutorGross - withholding;
@@ -57,6 +61,7 @@ export default function BookingPage() {
       parentEmail: data.get('parentEmail'),
       parentPhone: data.get('parentPhone'),
       studentName: data.get('studentName'),
+      senderName: data.get('senderName'),
       bookingDate: data.get('bookingDate'),
       durationMinutes: duration,
       locationPreference: data.get('location'),
@@ -72,16 +77,105 @@ export default function BookingPage() {
     });
     const result = await res.json();
     if (!res.ok) { setError(result.error || 'Unable to create booking.'); setLoading(false); return; }
+    setSubmittedBookingId(result.booking?.id ?? '');
+    setSubmittedStudentName(String(data.get('studentName') ?? ''));
+    setSubmittedSenderName(String(data.get('senderName') ?? ''));
     setSubmitted(true);
   }
 
-  if (submitted) {
+  async function notifySent() {
+    if (!submittedBookingId) return;
+    await fetch(`/api/bookings/${submittedBookingId}/notify`, { method: 'POST' });
+    setNotified(true);
+  }
+
+  if (submitted && tutor) {
+    const bankName    = process.env.NEXT_PUBLIC_BANK_NAME    ?? '';
+    const bankAccount = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? '';
+    const bankHolder  = process.env.NEXT_PUBLIC_BANK_HOLDER  ?? '';
+
+    const bankRows = [
+      { label: '은행', value: bankName },
+      { label: '계좌번호', value: bankAccount },
+      { label: '예금주', value: bankHolder },
+      { label: '송금 금액', value: `₩${grossAmount.toLocaleString()}` },
+      { label: '송금자 이름', value: submittedSenderName },
+      { label: '송금 메모', value: `${submittedStudentName} / ${tutor.name}` },
+    ];
+
     return (
       <main className="container" style={{ padding: '3rem 0 4rem' }}>
-        <div className="card" style={{ padding: '2rem', maxWidth: '480px' }}>
-          <h2 style={{ margin: 0 }}>Booking request sent</h2>
-          <p style={{ marginTop: '0.75rem', color: '#374151' }}>
-            {tutor?.name ?? 'The tutor'} has 24 hours to accept. You will receive an email and SMS confirmation when they respond. Payment will be collected on acceptance.
+        <div style={{ maxWidth: '520px', display: 'grid', gap: '1.5rem' }}>
+          <div>
+            <p className="tag">Payment required</p>
+            <h1 className="section-title">Complete your payment</h1>
+            <p className="subtitle" style={{ marginTop: '0.5rem' }}>
+              Booking request sent to <strong>{tutor.name}</strong>. Transfer the session fee to confirm your spot.
+            </p>
+          </div>
+
+          {/* Warning */}
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '1rem 1.25rem' }}>
+            <p style={{ margin: 0, fontWeight: 700, color: '#b91c1c', fontSize: '0.9rem' }}>⚠️ 주의 / Important</p>
+            <p style={{ margin: '0.4rem 0 0', fontSize: '0.875rem', color: '#991b1b', lineHeight: 1.6 }}>
+              아래 계좌로만 송금해 주세요. 다른 계좌로 보낸 경우 예약이 확정되지 않으며, 리뷰 및 별점을 남기실 수 없습니다.<br />
+              <span style={{ color: '#6b7280' }}>Payment must go to the account below only. Payments to any other account will not be recognized — your booking will not be confirmed and you will not be able to leave a review or rating (리뷰/별점).</span>
+            </p>
+          </div>
+
+          {/* Bank transfer details */}
+          <div className="card" style={{ padding: '1.5rem', display: 'grid', gap: '1rem' }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>토스 송금</p>
+            <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem' }}>
+              {bankRows.map(row => (
+                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.4rem 0', borderBottom: '1px solid #f3f4f6' }}>
+                  <span style={{ color: '#6b7280', flexShrink: 0 }}>{row.label}</span>
+                  <strong style={{ textAlign: 'right', wordBreak: 'break-all' }}>{row.value}</strong>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '0.6rem', padding: '0.75rem 1rem' }}>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#c2410c', fontWeight: 600 }}>
+                송금 시 &apos;보내는 분 이름(송금자명)&apos;을 본인의 실명(계좌명)으로 설정해 주세요.
+              </p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#9a3412' }}>
+                Set the sender name to your real name (실명) so we can match your payment.
+              </p>
+            </div>
+          </div>
+
+
+          {/* Review warning — repeated at action point */}
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '0.85rem 1rem' }}>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#b91c1c', fontWeight: 700 }}>
+              ⚠️ 위 계좌로 송금하지 않으면 리뷰 및 별점(⭐)을 남기실 수 없습니다.
+            </p>
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#991b1b' }}>
+              Reviews and ratings are only unlocked after your payment is verified.
+            </p>
+          </div>
+
+          {/* Sent button */}
+          {notified ? (
+            <div style={{ padding: '1rem 1.25rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', textAlign: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700, color: '#16a34a' }}>✔ 송금 완료 알림이 전송되었습니다</p>
+              <p style={{ margin: '0.3rem 0 0', fontSize: '0.85rem', color: '#15803d' }}>
+                입금 확인 후 예약이 확정됩니다. 확정 시 이메일로 안내드립니다.
+              </p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={notifySent}
+              className="button"
+              style={{ width: '100%', fontSize: '1rem', padding: '0.9rem' }}
+            >
+              송금 완료 / Sent! →
+            </button>
+          )}
+
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
+            문의: andyyan0806@gmail.com
           </p>
         </div>
       </main>
@@ -111,8 +205,12 @@ export default function BookingPage() {
             <input type="tel" name="parentPhone" required placeholder="010-1234-5678" style={inputStyle} />
           </label>
           <label style={labelStyle}>
-            Child's name
+            Child&apos;s name
             <input name="studentName" type="text" required placeholder="Student name" style={inputStyle} />
+          </label>
+          <label style={labelStyle}>
+            송금자 이름 <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.85rem' }}>(이체 시 표시되는 본인 실명)</span>
+            <input name="senderName" type="text" required placeholder="홍길동" style={inputStyle} />
           </label>
           <label style={labelStyle}>
             Desired date and time
@@ -184,7 +282,7 @@ export default function BookingPage() {
               <div style={{ display: 'grid', gap: '0.3rem', fontSize: '0.9rem' }}>
                 {[
                   { label: 'Session amount', value: `₩${grossAmount.toLocaleString()}` },
-                  { label: promoValid ? 'Platform fee (waived)' : 'Platform fee (10%)', value: promoValid ? '₩0' : `−₩${fee.toLocaleString()}` },
+                  { label: promoValid ? 'Platform fee (waived)' : 'Platform fee (7%)', value: promoValid ? '₩0' : `−₩${fee.toLocaleString()}` },
                   { label: 'Withholding tax (3.3%)', value: `−₩${withholding.toLocaleString()}` },
                   { label: 'Tutor net payout', value: `₩${tutorNet.toLocaleString()}`, bold: true },
                 ].map(row => (

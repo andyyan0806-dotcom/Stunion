@@ -59,6 +59,7 @@ create table if not exists bookings (
   fee                 integer not null,
   withholding         integer not null,
   payout_amount       integer not null,
+  sender_name         text,
   promo_code_used     text references promo_codes(code),
   status              text not null default 'pending'
                         check (status in ('pending','accepted','completed','refunded','cancelled')),
@@ -112,6 +113,17 @@ create table if not exists messages (
   content         text not null,
   redacted_at     timestamptz,
   created_at      timestamptz default now()
+);
+
+-- vouch_count column added to tutors:
+-- alter table tutors add column if not exists vouch_count integer not null default 0;
+
+create table if not exists vouches (
+  id             uuid primary key default gen_random_uuid(),
+  from_tutor_id  text not null references tutors(id) on delete cascade,
+  to_tutor_id    text not null references tutors(id) on delete cascade,
+  created_at     timestamptz default now(),
+  unique(from_tutor_id)
 );
 
 create table if not exists disputes (

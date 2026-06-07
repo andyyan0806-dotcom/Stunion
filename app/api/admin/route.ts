@@ -14,17 +14,20 @@ export async function GET(request: Request) {
     { data: approvals, error: approvalError },
     { data: disputes, error: disputeError },
     { data: completedBookings },
+    { data: pendingPayments },
   ] = await Promise.all([
     supabase.from('tutors').select('*', { count: 'exact', head: true }).in('status', ['verified', 'active']),
     supabase.from('tutors').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('tutors').select('id, name, email, phone, education, scores, rate, language, status, transcript_url, score_url, created_at').eq('status', 'pending').order('created_at', { ascending: true }),
     supabase.from('disputes').select('*').eq('status', 'open').order('created_at', { ascending: true }),
     supabase.from('bookings').select('amount').eq('status', 'completed'),
+    supabase.from('bookings').select('id, student_name, sender_name, parent_email, amount, booking_date, created_at, status, payment_notified, tutors(name)').eq('status', 'pending').order('payment_notified', { ascending: false }),
   ]);
 
   if (approvalError || disputeError) {
     return NextResponse.json({ error: (approvalError || disputeError)?.message }, { status: 500 });
   }
+
 
   const gmv = (completedBookings ?? []).reduce((sum, b) => sum + (b.amount ?? 0), 0);
 
@@ -56,6 +59,7 @@ export async function GET(request: Request) {
     },
     approvals: approvalsWithUrls,
     disputes: disputes ?? [],
+    pendingPayments: pendingPayments ?? [],
   });
 }
 
@@ -97,6 +101,20 @@ export async function POST(request: Request) {
       tutor_id: tutorId || null,
       free_sessions_remaining: freeSessions ?? 5,
     }]);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (payload.type === 'confirm-payment') {
+    const { bookingId } = payload;
+    const { error } = await supabase.from('bookings').update({ status: 'completed' }).eq('id', bookingId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (payload.type === 'decline-payment') {
+    const { bookingId } = payload;
+    const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', bookingId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }

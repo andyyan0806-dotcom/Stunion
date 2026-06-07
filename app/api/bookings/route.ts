@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const supabase = getSupabaseClient();
   const payload = await request.json();
 
-  const { tutorId, parentEmail, parentPhone, bookingDate, durationMinutes, locationPreference, studentName, subjectFocus, amount: rawAmount, promoCode } = payload;
+  const { tutorId, parentEmail, parentPhone, bookingDate, durationMinutes, locationPreference, studentName, senderName, subjectFocus, amount: rawAmount, promoCode } = payload;
 
   if (!parentEmail || !parentPhone || !bookingDate || !tutorId) {
     return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const fee = feeWaived ? 0 : Math.round(amount * 0.1);
+  const fee = feeWaived ? 0 : Math.round(amount * 0.07);
   const tutorGross = amount - fee;
   const withholding = Math.round(tutorGross * 0.033);
   const payoutAmount = tutorGross - withholding;
@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     parent_email: parentEmail,
     parent_phone: parentPhone,
     student_name: studentName ?? null,
+    sender_name: senderName ?? null,
     booking_date: bookingDate,
     duration_minutes: Number(durationMinutes),
     location_preference: locationPreference ?? 'online',
